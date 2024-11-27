@@ -115,8 +115,8 @@ def depthFirstSearch(problem: SearchProblem) -> List[Directions]:
 def breadthFirstSearch(problem: SearchProblem) -> List[Directions]:
 
     """Search the shallowest nodes in the search tree first."""
-
     #completat
+
     from util import Queue
     queue = Queue()
     visited = set()
