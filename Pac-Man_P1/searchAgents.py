@@ -502,7 +502,7 @@ def foodHeuristic(state: Tuple[Tuple, List[List]], problem: FoodSearchProblem):
 
     distances = []
     for food in food_list:
-        distance = util.manhattanDistance(position, food)
+        distance = mazeDistance(position, food, problem.startingGameState)
         distances.append(distance)
     return max(distances)
 

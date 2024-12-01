@@ -1,0 +1,599 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[romanian]{babel}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{graphicx}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\title{Pacman AI Implementation Documentation}
+\author{Student Pântea Marius-Nicușor }
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+Acest document prezintă implementarea și analiza detaliată a unei serii de algoritmi de Inteligență Artificială aplicați în jocul Pacman. Proiectul a avut ca scop înțelegerea practică a conceptelor fundamentale din IA, de la algoritmi de căutare de bază până la strategii avansate de joc.
+
+Implementarea include algoritmi clasici de căutare (DFS, BFS, UCS), algoritmi informați (A*), precum și tehnici de joc adversarial (Minimax, Alpha-Beta Pruning). Fiecare algoritm a fost adaptat specific pentru diferite provocări din jocul Pacman, cum ar fi găsirea celui mai scurt drum, colectarea tuturor punctelor de mâncare, și luarea deciziilor în prezența fantomelor.
+
+
+
+\section{Search Algorithms}
+\subsection{Depth First Search (DFS)}
+\begin{lstlisting}[language=Python]
+def depthFirstSearch(problem: SearchProblem) -> List[Directions]:
+
+    from util import Stack
+    stack = Stack()
+    visited = set()
+    start_state = problem.getStartState()
+    initial_path = []
+
+    stack.push((start_state, initial_path))
+
+    while not stack.isEmpty():
+        current_state, current_path = stack.pop()
+        if problem.isGoalState(current_state):
+            return current_path
+
+        if current_state not in visited:
+            visited.add(current_state)
+            successors = problem.getSuccessors(current_state)
+            for successor, action, _ in successors:
+                if successor not in visited:
+                    new_path = current_path + [action]
+                    stack.push((successor, new_path))
+    return []
+\end{lstlisting}
+
+Implementarea DFS folosește o stivă pentru a explora mai întâi ramurile cele mai adânci ale arborelui de căutare înainte de a face backtracking. 
+Algoritmul funcționează iterativ, folosind următorul proces:
+\begin{itemize}
+    \item Menține o mulțime de stări vizitate pentru a evita ciclurile
+    \item  Inițializează o stivă cu starea de start și o cale goală \newline
+\end{itemize}
+	
+Cât timp stiva nu este goală:
+\begin{itemize}
+  	\item  Extrage starea curentă și calea asociată
+  	\item  Verifică dacă este starea țintă
+  	\item  Dacă nu, marchează starea ca vizitată și explorează succesorii
+  	\item  Pentru fiecare succesor nevizitat, creează o nouă cale și adaugă în stivă
+\end{itemize}
+	
+
+\subsection{Breadth First Search (BFS)}
+\begin{lstlisting}[language=Python]
+def breadthFirstSearch(problem: SearchProblem) -> List[Directions]:
+   
+ from util import Queue
+    queue = Queue()
+    visited = set()
+    start_state = problem.getStartState()
+    initial_path = []
+
+    queue.push((start_state, initial_path))
+
+    while not queue.isEmpty():
+        current_state, current_path = queue.pop()
+        if problem.isGoalState(current_state):
+            return current_path
+
+        if current_state not in visited:
+            visited.add(current_state)
+            successors = problem.getSuccessors(current_state)
+            for successor, action, _ in successors:
+                if successor not in visited:
+                    new_path = current_path + [action]
+                    queue.push((successor, new_path))
+    return []
+\end{lstlisting}
+
+BFS folosește o coadă pentru a explora nodurile pe niveluri. Diferențele față de DFS:
+\begin{itemize}
+    \item Utilizează o coadă în loc de stivă
+    \item Garantează găsirea celui mai scurt drum în cazul costurilor egale
+    \item Se explorează toate stările de la un nivel înainte de trecerea la următorul
+\end{itemize}
+
+
+\subsection{Uniform Cost Search (UCS)}
+\begin{lstlisting}[language=Python]
+def uniformCostSearch(problem: SearchProblem) -> List[Directions]:
+   
+    from util import PriorityQueue
+    queue = PriorityQueue()
+    visited = set()
+    start_state = problem.getStartState()
+    initial_path = []
+    initial_cost = 0
+
+    queue.push((start_state, initial_path), initial_cost)
+
+    while not queue.isEmpty():
+        current_state, current_path = queue.pop()
+        if problem.isGoalState(current_state):
+            return current_path
+
+        if current_state not in visited:
+            visited.add(current_state)
+            successors = problem.getSuccessors(current_state)
+            for successor, action, step_cost in successors:
+                if successor not in visited:
+                    new_path = current_path + [action]
+                    new_cost = problem.getCostOfActions(new_path)
+                    queue.push((successor, new_path), new_cost)
+    return []
+\end{lstlisting}
+
+Implementarea Uniform Cost Search pentru găsirea celui mai scurt drum într-un spațiu de stări folosește o coadă de priorități pentru a explora stările în ordinea costului cumulat.Returnează o lista de acțiuni care duc la starea țintă cu cost minim, sau lista vidă dacă nu există soluție.
+
+Caracteristici principale:
+\begin{itemize}
+	\item  Completitudine: Garantează găsirea unui drum către starea țintă dacă acesta există
+  	\item  Optimalitate: Garantează găsirea drumului cu cel mai mic cost total
+  	\item  Explorare bazată pe cost: Vizitează întotdeauna starea nevizitată cu costul total minim
+\end{itemize}
+
+Funcționare:
+\begin{itemize}
+  	\item Menține o coadă de priorități unde prioritatea este costul total al drumului
+	\item Pentru fiecare stare, păstrează atât starea cât și drumul care a dus la ea
+	\item Folosește un set pentru a marca stările vizitate și a evita ciclurile
+	\item La fiecare pas, extrage starea cu costul minim și explorează succesorii ei
+\end{itemize}
+	
+
+
+
+\section{A* Search}
+\begin{lstlisting}[language=Python]
+def aStarSearch(problem: SearchProblem, heuristic=nullHeuristic) -> List[Directions]:
+
+    from util import PriorityQueue
+    start_state = problem.getStartState()
+    frontier = PriorityQueue()
+    frontier.push((start_state, [], 0), 0)
+    explored = {}
+
+    while not frontier.isEmpty():
+
+        state, actions, cost_so_far = frontier.pop()
+
+        if state in explored and cost_so_far >= explored[state]:
+            continue
+
+        explored[state] = cost_so_far
+
+        if problem.isGoalState(state):
+            return actions
+
+        for successor, action, step_cost in problem.getSuccessors(state):
+            new_cost = cost_so_far + step_cost
+            if successor not in explored or new_cost < explored[successor]:
+                new_actions = actions + [action]
+                priority = new_cost + heuristic(successor, problem)
+                frontier.push((successor, new_actions, new_cost), priority)
+
+    return []
+\end{lstlisting}
+
+Implementarea algoritmul A* Search combină costul drumului parcurs (g(n)) cu o euristică 
+(h(n)) pentru a găsi drumul optim către țintă. Este o îmbunătățire a algoritmului Uniform Cost 
+Search prin adăugarea unei euristici pentru ghidarea căutării.
+
+Caracteristici principale:
+\begin{itemize}
+	\item  Optimalitate: Garantează găsirea drumului optim când euristica este admisibilă
+  	\item  Completitudine: Găsește întotdeauna o soluție dacă aceasta există
+  	\item Eficiență: Mai eficient decât UCS prin folosirea euristicii pentru ghidarea căutării \newline
+\end{itemize} 
+
+Functionare:
+\begin{itemize}
+  	\item  Folosește f(n) = g(n) + h(n) ca prioritate, unde:
+		 * g(n) = costul real până la starea curentă
+ 		* h(n) = estimarea costului rămas până la țintă
+	\item Menține un dicționar 'explored' cu costurile minime cunoscute până la fiecare stare
+	\item Permite re-explorarea stărilor dacă se găsește un drum mai bun 
+\end{itemize}
+	
+
+
+\section{Finding All the Corners}
+
+\subsection{Corners Problem Implementation}
+\begin{lstlisting}[language=Python]
+def getStartState(self):
+    return self.startingPosition, self.corners
+
+def isGoalState(self, state: Any):
+    position, corners = state
+    return len(corners) == 0
+
+def getSuccessors(self, state: Any):
+    successors = []
+    currentPosition, remainingCorners = state
+    for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
+        x, y = currentPosition
+        dx, dy = Actions.directionToVector(action)
+        nextx, nexty = int(x + dx), int(y + dy)
+        if not self.walls[nextx][nexty]:
+            nextPosition = (nextx, nexty)
+            newRemainingCorners = tuple(corner for corner in remainingCorners 
+                                      if corner != nextPosition)
+            successors.append(((nextPosition, newRemainingCorners), action, 1))
+    self._expanded += 1	
+    return successors
+\end{lstlisting}
+
+Implementarea Corners Problem reprezintă o problemă de căutare în care Pacman trebuie să viziteze toate colțurile unui labirint, utilizând o stare definită ca un tuplu format din poziția curentă și colțurile nevizitate. Pentru rezolvarea problemei, s-au implementat trei metode principale: 
+\begin{itemize}
+    \item getStartState(): care returnează poziția inițială și lista de colțuri
+    \item isGoalState(): care verifică dacă toate colțurile au fost vizitate
+    \item getSuccessors(): care generează stările următoare posibile verificând cele patru direcții de mișcare și actualizând lista de colțuri nevizitate
+\end{itemize}
+
+
+\section{Corner Heuristic}
+
+\begin{lstlisting}[language=Python]
+def cornersHeuristic(state: Any, problem: CornersProblem):
+    current_pos, unvisited_corners = state
+    if len(unvisited_corners) == 0:
+        return 0
+
+    closest_distance = float('inf')
+    for corner in unvisited_corners:
+        distance = util.manhattanDistance(current_pos, corner)
+        if distance < closest_distance:
+            closest_distance = distance
+    if len(unvisited_corners) == 1:
+        return closest_distance
+
+    max_corner_distance = 0
+    for i in range(len(unvisited_corners)):
+        corner1 = unvisited_corners[i]
+        for j in range(i + 1, len(unvisited_corners)):
+            corner2 = unvisited_corners[j]
+            distance = util.manhattanDistance(corner1, corner2)
+            if distance > max_corner_distance:
+                max_corner_distance = distance
+
+    return closest_distance + max_corner_distance
+\end{lstlisting}
+
+Implementarea Corner Heuristic este o funcție euristică pentru problema colțurilor care estimează costul minim până la vizitarea tuturor colțurilor rămase, folosind două componente principale: distanța Manhattan până la cel mai apropiat colț nevizitat (closest\_distance) și distanța maximă dintre oricare două colțuri nevizitate rămase (max\_corner\_distance)
+Euristica este admisibilă deoarece:
+\begin{itemize}
+    \item Trebuie să parcurgem cel puțin distanța până la cel mai apropiat colț
+    \item Trebuie să traversăm cel puțin distanța maximă între colțuri pentru a le vizita pe toate
+    \item Distanța Manhattan este întotdeauna mai mică sau egală cu distanța reală \newline
+\end{itemize}
+
+Euristica folosește cazuri speciale pentru eficiență:
+\begin{itemize}
+    \item Returnează 0 când nu mai sunt colțuri de vizitat
+    \item Returnează doar distanța până la ultimul colț când a rămas unul singur
+    \item Combină ambele distanțe pentru cazul general cu multiple colțuri
+\end{itemize}
+
+
+
+\section{Eating All The Dots}
+
+\subsection{Food Search Implementation}
+\begin{lstlisting}[language=Python]
+def foodHeuristic(state: Tuple[Tuple, List[List]], problem: FoodSearchProblem):
+   position, foodGrid = state
+    food_list = foodGrid.asList()
+
+    if not food_list:
+        return 0
+
+    distances = []
+    for food in food_list:
+        distance = mazeDistance(position, food, problem.startingGameState)
+        distances.append(distance)
+    return max(distances)
+\end{lstlisting}
+
+
+Euristică pentru problema Food Search în Pacman care estimează costul minim până la colectarea 
+întregii mâncări folosind distanța maximă între poziția curentă și oricare punct de mâncare rămas.
+
+Această euristică este:
+\begin{itemize}
+    \item  Admisibilă - nu supraestimează niciodată costul real deoarece Pacman trebuie să parcurgă cel puțin distanța până la cel mai îndepărtat punct de mâncare
+    \item  Consistentă - diferența între valorile euristice ale stărilor adiacente nu depășește costul tranziției
+    \item  Informativă - ghidează eficient căutarea folosind distanțele reale din labirint
+\end{itemize}
+
+Folosește mazeDistance pentru a calcula distanța exactă prin labirint între două puncte, luând 
+în considerare zidurile. Acest lucru face euristica mult mai precisă decât folosirea distanței 
+Manhattan sau Euclidiene, deoarece:
+\begin{itemize}
+    \item  Calculează calea reală pe care Pacman trebuie să o parcurgă
+    \item  Ia în considerare obstacolele și zidurile din labirint
+    \item  Oferă distanța minimă reală între două puncte în labirint
+\end{itemize}
+
+
+\section{Suboptimal Search}
+
+\subsection{Closest Dot Search Agent}
+\begin{lstlisting}[language=Python]
+def findPathToClosestDot(self, gameState: pacman.GameState):
+    startPosition = gameState.getPacmanPosition()
+    food = gameState.getFood()
+    walls = gameState.getWalls()
+    problem = AnyFoodSearchProblem(gameState)
+    return search.breadthFirstSearch(problem)
+
+class AnyFoodSearchProblem(PositionSearchProblem):
+    def isGoalState(self, state: Tuple[int, int]):
+        x,y = state
+        return self.food[x][y]
+\end{lstlisting}
+
+Implementarea Suboptimal Search (Greedy Agent) este o strategie simplă dar eficientă pentru colectarea punctelor de mâncare în Pacman, folosind findPathToClosestDot care aplică BFS pentru a găsi mereu drumul până la cel mai apropiat punct de mâncare. Deși această abordare nu garantează găsirea celei mai scurte căi pentru colectarea tuturor punctelor (de aceea este 'suboptimală'), ea oferă o soluție practică și rapidă, folosind strategia greedy de a merge mereu către cel mai apropiat obiectiv.
+Strategia suboptimală:
+\begin{itemize}
+    \item Găsește cel mai apropiat punct de mâncare
+    \item Folosește BFS pentru găsirea drumului
+    \item Simplifică problema prin focalizarea pe ținte apropiate
+\end{itemize}
+
+
+\section {ReflexAgent}
+\begin{lstlisting}[language=Python]
+def evaluationFunction(self, currentGameState: GameState, action):
+    successorGameState = currentGameState.generatePacmanSuccessor(action)
+    newPos = successorGameState.getPacmanPosition()
+    newFood = successorGameState.getFood()
+    newGhostStates = successorGameState.getGhostStates()
+    newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+
+    foodList = newFood.asList()
+    if foodList:
+        foodDistances = [manhattanDistance(newPos, food) for food in foodList]
+        nearestFoodDist = min(foodDistances)
+    else:
+        nearestFoodDist = 0
+
+    ghostDistances = [manhattanDistance(newPos, ghost.getPosition()) 
+                     for ghost in newGhostStates]
+    nearestGhostDist = min(ghostDistances) if ghostDistances else float('inf')
+    scaredBonus = sum(ghostState.scaredTimer for ghostState in newGhostStates)
+
+    foodScore = -nearestFoodDist
+    ghostScore = 10 if nearestGhostDist < 2 else 0
+    foodCountPenalty = -len(foodList) * 10
+    scaredGhostBonus = scaredBonus * 5
+
+    totalScore = (successorGameState.getScore() + foodScore + 
+                 foodCountPenalty + scaredGhostBonus - ghostScore)
+    return totalScore
+\end{lstlisting}
+
+Agentul reflex evaluează stările folosind:
+\begin{itemize}
+    \item Distanța până la cea mai apropiată mâncare
+    \item Distanța până la fantome
+    \item Numărul total de puncte de mâncare rămase
+    \item Timpul în care fantomele sunt speriate \newline
+\end{itemize}
+
+foodCountPenalty = -len(foodList) * 10
+\begin{itemize}
+    \item Factorul 10 este suficient de mare pentru a face diferența semnificativă în scorul total 
+    \item Dacă penalizarea ar fi mai mică (de ex *2), Pacman ar putea prefera să evite fantome în loc să mănânc
+    \item Dacă ar fi prea mare (de ex *50), Pacman ar risca prea mult încercând să mănânce, ignorând pericolele \newline
+\end{itemize}
+
+scaredGhostBonus = scaredBonus * 5
+\begin{itemize}
+    \item Factorul 5 este mai mic decât penalizarea : Mâncarea este obiectivul principal si urmărirea fantomelor speriate este secundară
+    \item Este totuși suficient de mare pentru a face atractivă urmărirea fantomelor speriate \newline
+\end{itemize}
+
+ghostScore = 10 if nearestGhostDist (mai mic decat) 2 else 0
+\begin{itemize}
+    \item Valoarea 10 este o penalizare imediată și severă pentru apropierea de fantome
+    \item Distanța de 2 unități este un prag bun pentru siguranță, oferind timp de reacție
+    \item Este egală cu penalizarea pentru un punct de mâncare rămas \newline
+\end{itemize}
+
+
+\section{Agent Minimax}
+
+\begin{lstlisting}[language=Python]
+def getAction(self, gameState: GameState):
+    bestValue = float('-inf')
+    bestAction = None
+    legalActions = gameState.getLegalActions(0)
+
+    for action in legalActions:
+        successorState = gameState.generateSuccessor(0, action)
+        value = self.getMinValue(successorState, self.depth, 1)
+        if value > bestValue:
+            bestValue = value
+            bestAction = action
+
+    return bestAction
+
+def getMaxValue(self, gameState, depth, agentIndex):
+    if gameState.isWin() or gameState.isLose() or depth == 0:
+        return self.evaluationFunction(gameState)
+
+    value = float('-inf')
+    legalActions = gameState.getLegalActions(agentIndex)
+
+    for action in legalActions:
+        successorState = gameState.generateSuccessor(agentIndex, action)
+        value = max(value, self.getMinValue(successorState, depth, agentIndex + 1))
+
+    return value
+
+def getMinValue(self, gameState, depth, agentIndex):
+    if gameState.isWin() or gameState.isLose() or depth == 0:
+        return self.evaluationFunction(gameState)
+
+    value = float('inf')
+    legalActions = gameState.getLegalActions(agentIndex)
+
+    if agentIndex == gameState.getNumAgents() - 1:
+        for action in legalActions:
+            successorState = gameState.generateSuccessor(agentIndex, action)
+            value = min(value, self.getMaxValue(successorState, depth - 1, 0))
+    else:
+        for action in legalActions:
+            successorState = gameState.generateSuccessor(agentIndex, action)
+            value = min(value, self.getMinValue(successorState, depth, agentIndex + 1))
+    return value
+\end{lstlisting}
+
+Implementarea agentului Minimax pentru Pacman determină cea mai bună acțiune evaluând toate 
+posibilitățile până la o adâncime specificată. Consideră Pacman ca agent de maximizare și 
+fantomele ca agenți de minimizare.
+Structura algoritmului:
+\begin{itemize}
+    \item getAction(): Punctul de intrare care evaluează toate acțiunile posibile ale lui Pacman. Returnează acțiunea cu cel mai bun scor maxim posibil
+    \item getMaxValue(): Punctul de intrare care evaluează toate acțiunile posibile ale lui Pacma. Returnează acțiunea cu cel mai bun scor maxim posibil
+    \item getMinValue():- Reprezintă nivelurile fantomelor. Caută acțiunile care minimizează scorul maxim posibil. Gestionează tranziția între fantome și înapoi la Pacman
+\end{itemize}
+Exploreaza complet până la adâncimea specificată , alternand corect între Pacman și multiple fantome.
+
+
+\section{Alpha-Beta Pruning}
+\begin{lstlisting}[language=Python]
+    def getAction(self, gameState: GameState):
+    
+        alpha = float('-inf')
+        beta = float('inf')
+        bestValue = float('-inf')
+        bestAction = None
+
+        legalActions = gameState.getLegalActions(0)
+        for action in legalActions:
+            successorState = gameState.generateSuccessor(0, action)
+            value = self.getMinValue(successorState, self.depth, 1, alpha, beta)
+            if value > bestValue:
+                bestValue = value
+                bestAction = action
+            alpha = max(alpha, bestValue)
+
+        return bestAction
+
+    def getMaxValue(self, gameState, depth, agentIndex, alpha, beta):
+
+        if gameState.isWin() or gameState.isLose() or depth == 0:
+            return self.evaluationFunction(gameState)
+
+        value = float('-inf')
+        legalActions = gameState.getLegalActions(agentIndex)
+
+        for action in legalActions:
+            successorState = gameState.generateSuccessor(agentIndex, action)
+            value = max(value, self.getMinValue(successorState, depth, agentIndex + 1, alpha, beta))
+            if value > beta:
+                return value
+            alpha = max(alpha, value)
+
+        return value
+
+    def getMinValue(self, gameState, depth, agentIndex, alpha, beta):
+
+        if gameState.isWin() or gameState.isLose() or depth == 0:
+            return self.evaluationFunction(gameState)
+
+        value = float('inf')
+        legalActions = gameState.getLegalActions(agentIndex)
+
+        if agentIndex == gameState.getNumAgents() - 1:
+            for action in legalActions:
+                successorState = gameState.generateSuccessor(agentIndex, action)
+                value = min(value, self.getMaxValue(successorState, depth - 1, 0, alpha, beta))
+                if value < alpha:
+                    return value
+                beta = min(beta, value)
+        else:
+            for action in legalActions:
+                successorState = gameState.generateSuccessor(agentIndex, action)
+                value = min(value, self.getMinValue(successorState, depth, agentIndex + 1, alpha, beta))
+                if value < alpha:
+                    return value
+                beta = min(beta, value)
+
+        return value
+
+\end{lstlisting}
+
+Implementarea algoritmul Minimax cu tăiere Alpha-Beta pentru Pacman, o optimizare a algoritmului Minimax care elimină explorarea ramurilor care nu pot influența decizia finală. Menține aceeași optimalitate ca Minimax dar cu eficiență mult îmbunătățită.
+Componente principale:
+\begin{itemize}
+    \item  Alpha : Cea mai bună valoare găsită pentru Pacman
+    \item  Beta : Cea mai bună valoare găsită Fantome
+    \item  Tăiere : Oprește explorarea când alfa mai mare decat beta (nu se poate găsi o valoare mai bună) \newline
+\end{itemize}
+
+Structura algoritmului:
+\begin{itemize}
+    \item  getAction(): Nivelul rădăcină, inițializează alfa și beta
+    \item getMaxValue(): Pentru Pacman
+    \item getMinValue(): Pentru fantome . Gestionează tranzițiile între fantome și adâncime \newline
+\end{itemize}
+
+Optimizări față de Minimax:
+\begin{itemize}
+    \item  Elimină explorarea ramurilor inutile
+    \item  Menține garanția de optimalitate
+   \item   Reduce complexitatea în cazul mediu \newline
+\end{itemize}
+
+
+
+\section{Conclusions}
+Implementarea acestui proiect a oferit o perspectivă practică asupra modului în care diferite concepte din Inteligența Artificială pot fi aplicate într-un scenariu de joc real. Prin dezvoltarea și testarea diferitelor componente, am observat:
+
+\begin{itemize}
+    \item Importanța alegerii algoritmului potrivit pentru fiecare tip de problemă : de exemplu, BFS pentru găsirea drumului optim vs. strategii greedy pentru decizii rapide
+    \item Rolul crucial al euristicilor în îmbunătățirea performanței - atât în căutarea informată (A*) cât și în evaluarea stărilor de joc
+    \item Complexitatea implementării agenților inteligenți care trebuie să ia decizii în timp real, ținând cont de multiple obiective și constrângeri
+    \item Beneficiile semnificative ale optimizărilor precum Alpha-Beta Pruning în reducerea spațiului de căutare
+\end{itemize}
+
+
+\end{document}
